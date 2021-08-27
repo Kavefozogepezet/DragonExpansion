@@ -1,5 +1,7 @@
 {
   "item.kaves_de.example_item": "Example",
 
+  "block.kaves_de.rideable_dragon_egg": "Red Dragon Egg",
+
   "entity.kaves_de.example_dragon": "Red Dragon"
 }

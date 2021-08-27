@@ -1,0 +1,6 @@
+{
+  "variants": {
+    "lit=false": { "model": "kaves_de:block/rideable_dragon_egg" },
+    "lit=true": { "model": "kaves_de:block/rideable_dragon_egg_burning" }
+  }
+}

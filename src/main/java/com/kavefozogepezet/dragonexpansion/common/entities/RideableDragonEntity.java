@@ -1,5 +1,7 @@
 package com.kavefozogepezet.dragonexpansion.common.entities;
 
+import com.kavefozogepezet.dragonexpansion.common.blocks.RideableDragonEgg;
+import com.kavefozogepezet.dragonexpansion.common.goals.DragonBreedGoal;
 import com.kavefozogepezet.dragonexpansion.core.init.EntityTypeInit;
 import mcp.MethodsReturnNonnullByDefault;
 import net.minecraft.block.BlockState;
@@ -61,7 +63,7 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount 
         //this.goalSelector.addGoal(1, new SmallDragonEntity.DragonFireballAttack(this));
 
         //this.goalSelector.addGoal(1, new MeleeAttackGoal(this, 1.0D, false));
-        //this.goalSelector.addGoal(2, new SmallDragonEntity.DragonBreedGoal(this, 1.0D, SmallDragonEntity.class));
+        this.goalSelector.addGoal(2, new DragonBreedGoal(this, 1.0D, RideableDragonEntity.class));
         this.goalSelector.addGoal(5, new WaterAvoidingRandomWalkingGoal(this, 1.0D));
         this.targetSelector.addGoal(1, (new HurtByTargetGoal(this)).setAlertOthers());
         //this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, LivingEntity.class, true));
@@ -388,7 +390,7 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount 
     public void handleStopJump() {
     }
 
-    public class AnimationHolder {
+    public static class AnimationHolder {
         public float prev;
         public float curr;
 

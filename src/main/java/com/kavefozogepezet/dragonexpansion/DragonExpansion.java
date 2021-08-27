@@ -2,8 +2,10 @@ package com.kavefozogepezet.dragonexpansion;
 
 import com.kavefozogepezet.dragonexpansion.client.render.RideableDragonRenderer;
 import com.kavefozogepezet.dragonexpansion.common.entities.RideableDragonEntity;
+import com.kavefozogepezet.dragonexpansion.core.init.BlockInit;
 import com.kavefozogepezet.dragonexpansion.core.init.EntityTypeInit;
 import com.kavefozogepezet.dragonexpansion.core.init.ItemInit;
+import com.kavefozogepezet.dragonexpansion.core.init.TileEntityTypeInit;
 import net.minecraft.client.gui.ScreenManager;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.RenderTypeLookup;
@@ -34,6 +36,8 @@ public class DragonExpansion {
         BUS.addListener((this::doClientStuff));
 
         ItemInit.ITEMS.register(BUS);
+        BlockInit.BLOCKS.register(BUS);
+        TileEntityTypeInit.TILES.register(BUS);
         EntityTypeInit.ENTITY_TYPES.register(BUS);
     }
 
