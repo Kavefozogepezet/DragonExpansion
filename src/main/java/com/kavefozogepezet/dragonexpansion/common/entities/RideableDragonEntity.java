@@ -2,6 +2,8 @@ package com.kavefozogepezet.dragonexpansion.common.entities;
 
 import com.kavefozogepezet.dragonexpansion.common.blocks.RideableDragonEgg;
 import com.kavefozogepezet.dragonexpansion.common.goals.DragonBreedGoal;
+import com.kavefozogepezet.dragonexpansion.common.goals.MeleeAttackIfAdultGoal;
+import com.kavefozogepezet.dragonexpansion.common.goals.PanicIfBabyGoal;
 import com.kavefozogepezet.dragonexpansion.core.init.EntityTypeInit;
 import mcp.MethodsReturnNonnullByDefault;
 import net.minecraft.block.Block;
@@ -13,6 +15,7 @@ import net.minecraft.entity.ai.attributes.AttributeModifierMap;
 import net.minecraft.entity.ai.attributes.Attributes;
 import net.minecraft.entity.ai.goal.*;
 import net.minecraft.entity.passive.AnimalEntity;
+import net.minecraft.entity.passive.PolarBearEntity;
 import net.minecraft.entity.passive.horse.AbstractHorseEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.datasync.DataParameter;
@@ -20,6 +23,7 @@ import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
 import net.minecraft.potion.Effects;
 import net.minecraft.util.*;
+import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.vector.Vector3d;
@@ -33,11 +37,14 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
 
-public class RideableDragonEntity extends AnimalEntity implements IJumpingMount {
+public class RideableDragonEntity extends AnimalEntity implements IJumpingMount, IAngerable {
 
     // -------------------- variables --------------------
     private static final DataParameter<Optional<UUID>> DATA_ID_PARENT_UUID = EntityDataManager.defineId(AbstractHorseEntity.class, DataSerializers.OPTIONAL_UUID);
     private static final DataParameter<Boolean> FLYING = EntityDataManager.defineId(RideableDragonEntity.class, DataSerializers.BOOLEAN);
+    private static final RangedInteger PERSISTENT_ANGER_TIME = TickRangeConverter.rangeOfSeconds(20, 39);
+    private int remainingPersistentAngerTime;
+    private UUID persistentAngerTarget;
     private boolean isJumping = false;
     protected float playerJumpPendingScale;
     public boolean isStill = false;
@@ -67,19 +74,13 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount 
     protected void registerGoals() {
         super.registerGoals();
         this.goalSelector.addGoal(0, new SwimGoal(this));
-
-        //this.goalSelector.addGoal(1, new SmallDragonEntity.DragonFireballAttack(this));
-
-        //this.goalSelector.addGoal(1, new MeleeAttackGoal(this, 1.0D, false));
-        this.goalSelector.addGoal(2, new DragonBreedGoal(this, 1.0D, RideableDragonEntity.class));
-        this.goalSelector.addGoal(5, new WaterAvoidingRandomWalkingGoal(this, 1.0D));
+        this.goalSelector.addGoal(1, new MeleeAttackIfAdultGoal(this, 1.25d, true));
+        this.goalSelector.addGoal(1, new PanicIfBabyGoal(this, 2.0d));
         this.targetSelector.addGoal(1, (new HurtByTargetGoal(this)).setAlertOthers());
-        //this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, LivingEntity.class, true));
-        //this.targetSelector.addGoal(4, new ResetAngerGoal<>(this, false));
-
-        //this.goalSelector.addGoal(1, new SmallDragonEntity.DragonMeleeAttack(this, 1.0D, true));
-        //his.goalSelector.addGoal(6, new WaterAvoidingRandomWalkingGoal(this, 0.7D));*/
-
+        this.goalSelector.addGoal(2, new DragonBreedGoal(this, 1.0D, RideableDragonEntity.class));
+        this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, PlayerEntity.class,  10, true, false, this::isAngryAt));
+        this.goalSelector.addGoal(4, new WaterAvoidingRandomWalkingGoal(this, 1.0D));
+        this.targetSelector.addGoal(5, new ResetAngerGoal<>(this, false));
         this.goalSelector.addGoal(6, new LookAtGoal(this, PlayerEntity.class, 6.0F));
         this.goalSelector.addGoal(7, new LookRandomlyGoal(this));
     }
@@ -169,7 +170,8 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount 
         this.playSound(SoundEvents.HORSE_JUMP, 0.4F, 1.0F);
     }
 
-    // -------------------- custom functions and overrides --------------------
+    // -------------------- overrides --------------------
+    @Override
     public boolean isPushable() {
         return !this.isVehicle();
     }
@@ -189,6 +191,20 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount 
         }
     }
 
+    @Override
+    public Vector3d getDismountLocationForPassenger(LivingEntity p_230268_1_) {
+        Vector3d vector3d = getCollisionHorizontalEscapeVector((double)this.getBbWidth(), (double)p_230268_1_.getBbWidth(), this.yRot + (p_230268_1_.getMainArm() == HandSide.RIGHT ? 90.0F : -90.0F));
+        Vector3d vector3d1 = this.getDismountLocationInDirection(vector3d, p_230268_1_);
+        if (vector3d1 != null) {
+            return vector3d1;
+        } else {
+            Vector3d vector3d2 = getCollisionHorizontalEscapeVector((double)this.getBbWidth(), (double)p_230268_1_.getBbWidth(), this.yRot + (p_230268_1_.getMainArm() == HandSide.LEFT ? 90.0F : -90.0F));
+            Vector3d vector3d3 = this.getDismountLocationInDirection(vector3d2, p_230268_1_);
+            return vector3d3 != null ? vector3d3 : this.position();
+        }
+    }
+
+    @Override
     public void travel(Vector3d travelVector) {
         if (this.isAlive()) {
             boolean b1 = this.entityData.get(FLYING);
@@ -297,7 +313,7 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount 
                 };
             }
         }
-        this.wingAnimation.updateAnimation((float)((this.wingAnimation.curr + 1d / 15d * Math.PI) % (2 * Math.PI)));
+        this.wingAnimation.updateAnimation((float)((this.wingAnimation.curr + 1d / 10d * Math.PI) % (2 * Math.PI)));
         this.legAnimation.updateAnimation((float)((this.legAnimation.curr + 1d / 5d * Math.PI) % (2 * Math.PI)));
 
         Vector3d movement = this.position().subtract(prevPos);
@@ -311,11 +327,6 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount 
         } else {
             this.bodyRotX.updateAnimation(0f);
         }
-    }
-
-    @Nullable
-    public Entity getControllingPassenger() {
-        return this.getPassengers().isEmpty() ? null : this.getPassengers().get(0);
     }
 
     @Override
@@ -347,6 +358,7 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount 
         return p_205022_2_.getBlockState(p_205022_1_.below()).is(Blocks.END_STONE) ? 10.0F : - 0.5F;
     }
 
+    // -------------------- custom functions --------------------
     @Nullable
     public UUID getParentUUID() {
         return this.entityData.get(DATA_ID_PARENT_UUID).orElse((UUID)null);
@@ -356,12 +368,53 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount 
         this.entityData.set(DATA_ID_PARENT_UUID, Optional.ofNullable(p_184779_1_));
     }
 
+    @Nullable
+    public Entity getControllingPassenger() {
+        return this.getPassengers().isEmpty() ? null : this.getPassengers().get(0);
+    }
+
     protected void doPlayerRide(PlayerEntity p_110237_1_) {
         if (!this.level.isClientSide) {
             p_110237_1_.yRot = this.yRot;
             p_110237_1_.xRot = this.xRot;
             p_110237_1_.startRiding(this);
         }
+    }
+
+    @Nullable
+    private Vector3d getDismountLocationInDirection(Vector3d p_234236_1_, LivingEntity p_234236_2_) {
+        double d0 = this.getX() + p_234236_1_.x;
+        double d1 = this.getBoundingBox().minY;
+        double d2 = this.getZ() + p_234236_1_.z;
+        BlockPos.Mutable blockpos$mutable = new BlockPos.Mutable();
+
+        for(Pose pose : p_234236_2_.getDismountPoses()) {
+            blockpos$mutable.set(d0, d1, d2);
+            double d3 = this.getBoundingBox().maxY + 0.75D;
+
+            while(true) {
+                double d4 = this.level.getBlockFloorHeight(blockpos$mutable);
+                if ((double)blockpos$mutable.getY() + d4 > d3) {
+                    break;
+                }
+
+                if (TransportationHelper.isBlockFloorValid(d4)) {
+                    AxisAlignedBB axisalignedbb = p_234236_2_.getLocalBoundsForPose(pose);
+                    Vector3d vector3d = new Vector3d(d0, (double)blockpos$mutable.getY() + d4, d2);
+                    if (TransportationHelper.canDismountTo(this.level, p_234236_2_, axisalignedbb.move(vector3d))) {
+                        p_234236_2_.setPose(pose);
+                        return vector3d;
+                    }
+                }
+
+                blockpos$mutable.move(Direction.UP);
+                if (!((double)blockpos$mutable.getY() < d3)) {
+                    break;
+                }
+            }
+        }
+
+        return null;
     }
 
     public double getJumpPotential() {
@@ -418,6 +471,33 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount 
         Random random = new Random();
         int chance = Math.abs(random.nextInt()) % 2;
         return chance == 0 && result;
+    }
+
+    // -------------------- anger --------------------
+    @Override
+    public int getRemainingPersistentAngerTime() {
+        return this.remainingPersistentAngerTime;
+    }
+
+    @Override
+    public void setRemainingPersistentAngerTime(int i) {
+        this.remainingPersistentAngerTime = i;
+    }
+
+    @Nullable
+    @Override
+    public UUID getPersistentAngerTarget() {
+        return this.persistentAngerTarget;
+    }
+
+    @Override
+    public void setPersistentAngerTarget(@Nullable UUID uuid) {
+        this.persistentAngerTarget = uuid;
+    }
+
+    @Override
+    public void startPersistentAngerTimer() {
+        this.setRemainingPersistentAngerTime(PERSISTENT_ANGER_TIME.randomValue(this.random));
     }
 
     // for animations
