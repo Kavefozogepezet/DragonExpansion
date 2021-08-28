@@ -4,6 +4,9 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import javax.annotation.Nullable;
+
+import com.kavefozogepezet.dragonexpansion.common.entities.RideableDragonEntity;
+import com.kavefozogepezet.dragonexpansion.core.init.BlockInit;
 import net.minecraft.entity.EntityPredicate;
 import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.ai.goal.Goal.Flag;
@@ -58,7 +61,6 @@ public class DragonBreedGoal extends Goal {
         if (this.loveTime >= 60 && this.animal.distanceToSqr(this.partner) < 36.0D) {
             this.breed();
         }
-
     }
 
     @Nullable
@@ -81,9 +83,13 @@ public class DragonBreedGoal extends Goal {
 
     protected void breed() {
         BlockPos eggPos = new BlockPos(this.animal.position());
-        while(level.getBlockState(eggPos.below()).isAir()){
+        while(level.getBlockState(eggPos.below()).isAir() && eggPos.below().getY() != 0){
             eggPos = eggPos.below();
         }
-        this.animal.spawnChildFromBreeding((ServerWorld)this.level, this.partner);
+        if(eggPos.below().getY() != 0) {
+            this.level.setBlock(eggPos, BlockInit.RIDEABLE_DRAGON_EGG.get().defaultBlockState(), 3);
+        }
+        this.animal.resetLove();
+        this.partner.resetLove();
     }
 }

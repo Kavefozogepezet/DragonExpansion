@@ -50,7 +50,7 @@ public class RideableDragonEggTE extends TileEntity implements ITickableTileEnti
                     );
                 }
                 if (hatchTime == 0) {
-                    RideableDragonEntity createdEntity = new RideableDragonEntity(EntityTypeInit.RIDEABLE_DRAGON.get(), this.level);
+                    RideableDragonEntity createdEntity = new RideableDragonEntity(EntityTypeInit.PURPUR_DRAGON.get(), this.level);
                     createdEntity.setAge(-24000);
                     createdEntity.setPos(
                             this.getBlockPos().getX() + 0.5d,

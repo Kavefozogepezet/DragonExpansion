@@ -12,8 +12,8 @@ import net.minecraft.util.ActionResultType;
 import net.minecraft.util.Hand;
 import net.minecraft.world.World;
 
-public class ExampleDragon extends RideableDragonEntity{
-    public ExampleDragon(EntityType<? extends AnimalEntity> p_i48563_1_, World p_i48563_2_) {
+public class PurpurDragon extends RideableDragonEntity{
+    public PurpurDragon(EntityType<? extends AnimalEntity> p_i48563_1_, World p_i48563_2_) {
         super(p_i48563_1_, p_i48563_2_);
     }
 
@@ -67,25 +67,10 @@ public class ExampleDragon extends RideableDragonEntity{
             f = 2.0F;
             i = 20;
             j = 3;
-        } else if (item == Items.SUGAR) {
-            f = 1.0F;
-            i = 30;
-            j = 3;
-        } else if (item == Blocks.HAY_BLOCK.asItem()) {
-            f = 20.0F;
-            i = 180;
-        } else if (item == Items.APPLE) {
-            f = 3.0F;
-            i = 60;
-            j = 3;
-        } else if (item == Items.GOLDEN_CARROT) {
-            f = 4.0F;
-            i = 60;
-            j = 5;
-        } else if (item == Items.GOLDEN_APPLE || item == Items.ENCHANTED_GOLDEN_APPLE) {
-            f = 10.0F;
-            i = 240;
-            j = 10;
+            if (!this.level.isClientSide && this.getAge() == 0 && !this.isInLove()) {
+                flag = true;
+                this.setInLove(p_190678_1_);
+            }
         }
 
         if (this.getHealth() < this.getMaxHealth() && f > 0.0F) {

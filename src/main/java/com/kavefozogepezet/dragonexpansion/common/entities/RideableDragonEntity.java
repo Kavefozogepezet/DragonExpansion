@@ -4,13 +4,16 @@ import com.kavefozogepezet.dragonexpansion.common.blocks.RideableDragonEgg;
 import com.kavefozogepezet.dragonexpansion.common.goals.DragonBreedGoal;
 import com.kavefozogepezet.dragonexpansion.core.init.EntityTypeInit;
 import mcp.MethodsReturnNonnullByDefault;
+import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.*;
 import net.minecraft.entity.ai.attributes.AttributeModifierMap;
 import net.minecraft.entity.ai.attributes.Attributes;
 import net.minecraft.entity.ai.goal.*;
 import net.minecraft.entity.passive.AnimalEntity;
+import net.minecraft.entity.passive.horse.AbstractHorseEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.network.datasync.DataSerializers;
@@ -20,15 +23,20 @@ import net.minecraft.util.*;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.world.IWorld;
+import net.minecraft.world.IWorldReader;
 import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
 
 import javax.annotation.Nullable;
 import java.util.Optional;
+import java.util.Random;
+import java.util.UUID;
 
 public class RideableDragonEntity extends AnimalEntity implements IJumpingMount {
 
     // -------------------- variables --------------------
+    private static final DataParameter<Optional<UUID>> DATA_ID_PARENT_UUID = EntityDataManager.defineId(AbstractHorseEntity.class, DataSerializers.OPTIONAL_UUID);
     private static final DataParameter<Boolean> FLYING = EntityDataManager.defineId(RideableDragonEntity.class, DataSerializers.BOOLEAN);
     private boolean isJumping = false;
     protected float playerJumpPendingScale;
@@ -79,6 +87,7 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount 
     protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(FLYING, false);
+        this.entityData.define(DATA_ID_PARENT_UUID, Optional.empty());
     }
 
     @Override
@@ -89,7 +98,36 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount 
     @Nullable
     @Override
     public AgeableEntity getBreedOffspring(ServerWorld serverWorld, AgeableEntity ageableEntity) {
-        return EntityTypeInit.RIDEABLE_DRAGON.get().create(serverWorld);
+        return EntityTypeInit.PURPUR_DRAGON.get().create(serverWorld);
+    }
+
+    // -------------------- jumping mount --------------------
+    @Override
+    public void onPlayerJump(int value) {
+        if (true) { // saddled
+            if (value < 0) {
+                value = 0;
+            }
+            if (value >= 90) {
+                this.playerJumpPendingScale = 1.0F;
+            } else {
+                this.playerJumpPendingScale = 0.4F + 0.4F * (float)value / 90.0F;
+            }
+        }
+    }
+
+    @Override
+    public boolean canJump() {
+        return true; // saddled
+    }
+
+    @Override
+    public void handleStartJump(int i) {
+        this.playJumpSound();
+    }
+
+    @Override
+    public void handleStopJump() {
     }
 
     // -------------------- sound --------------------
@@ -304,6 +342,20 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount 
         return false;
     }
 
+    @Override
+    public float getWalkTargetValue(BlockPos p_205022_1_, IWorldReader p_205022_2_) {
+        return p_205022_2_.getBlockState(p_205022_1_.below()).is(Blocks.END_STONE) ? 10.0F : - 0.5F;
+    }
+
+    @Nullable
+    public UUID getParentUUID() {
+        return this.entityData.get(DATA_ID_PARENT_UUID).orElse((UUID)null);
+    }
+
+    public void setParentUUID(@Nullable UUID p_184779_1_) {
+        this.entityData.set(DATA_ID_PARENT_UUID, Optional.ofNullable(p_184779_1_));
+    }
+
     protected void doPlayerRide(PlayerEntity p_110237_1_) {
         if (!this.level.isClientSide) {
             p_110237_1_.yRot = this.yRot;
@@ -322,7 +374,7 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount 
     private int getJumpHeight() {
         BlockPos pos = this.getOnPos();
         int height = 0;
-        while(this.level.getBlockState(pos).isAir()){
+        while(this.level.getBlockState(pos).isAir() && pos.getY() != 0){
             pos = pos.below();
             height++;
         }
@@ -361,35 +413,14 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount 
         this.entityData.set(FLYING, flying);
     }
 
-    // -------------------- jumping mount --------------------
-    @Override
-    public void onPlayerJump(int value) {
-        if (true) { // saddled
-            if (value < 0) {
-                value = 0;
-            }
-            if (value >= 90) {
-                this.playerJumpPendingScale = 1.0F;
-            } else {
-                this.playerJumpPendingScale = 0.4F + 0.4F * (float)value / 90.0F;
-            }
-        }
+    public static boolean checkRideableDragonSpawnRules(EntityType<? extends MobEntity> p_223315_0_, IWorld p_223315_1_, SpawnReason p_223315_2_, BlockPos p_223315_3_, Random p_223315_4_) {
+        boolean result =  p_223315_1_.getBlockState(p_223315_3_.below()).is(Blocks.END_STONE);
+        Random random = new Random();
+        int chance = Math.abs(random.nextInt()) % 2;
+        return chance == 0 && result;
     }
 
-    @Override
-    public boolean canJump() {
-        return true; // saddled
-    }
-
-    @Override
-    public void handleStartJump(int i) {
-        this.playJumpSound();
-    }
-
-    @Override
-    public void handleStopJump() {
-    }
-
+    // for animations
     public static class AnimationHolder {
         public float prev;
         public float curr;

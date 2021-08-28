@@ -10,7 +10,7 @@ import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.util.ResourceLocation;
 
 public class RideableDragonRenderer extends MobRenderer<RideableDragonEntity, RideableDragonModel<RideableDragonEntity>> {
-    protected static final ResourceLocation TEXTURE = new ResourceLocation(DragonExpansion.MOD_ID, "textures/entities/red_dragon.png");
+    protected static final ResourceLocation TEXTURE = new ResourceLocation(DragonExpansion.MOD_ID, "textures/entities/purpur_dragon.png");
 
     public RideableDragonRenderer(EntityRendererManager p_i50961_1_) {
         super(p_i50961_1_, new RideableDragonModel<>(true, 66.0F, 10.0F, 5.0F, 5.0F, 96), 2.0f);
