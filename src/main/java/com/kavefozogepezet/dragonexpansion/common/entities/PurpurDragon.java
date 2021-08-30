@@ -1,6 +1,7 @@
 package com.kavefozogepezet.dragonexpansion.common.entities;
 
 import net.minecraft.block.Blocks;
+import net.minecraft.client.Minecraft;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -18,6 +19,9 @@ public class PurpurDragon extends RideableDragonEntity{
     }
 
     public ActionResultType mobInteract(PlayerEntity p_230254_1_, Hand p_230254_2_) {
+        if(Minecraft.getInstance().player != null){
+            Minecraft.getInstance().player.chat(this.level.isClientSide ? "client: " : "server: " + (this.getHatchType() ? "true" : "false"));
+        }
         ItemStack itemstack = p_230254_1_.getItemInHand(p_230254_2_);
         if (!this.isBaby()) {
             if (this.isVehicle()) {
@@ -35,13 +39,13 @@ public class PurpurDragon extends RideableDragonEntity{
                 return actionresulttype;
             }
         }
-
         if (this.isBaby()) {
             return super.mobInteract(p_230254_1_, p_230254_2_);
-        } else {
+        } else if(!this.getHatchType()) {
             this.doPlayerRide(p_230254_1_);
             return ActionResultType.sidedSuccess(this.level.isClientSide);
         }
+        return ActionResultType.PASS;
     }
 
     public ActionResultType fedFood(PlayerEntity p_241395_1_, ItemStack p_241395_2_) {
@@ -63,8 +67,12 @@ public class PurpurDragon extends RideableDragonEntity{
         int i = 0;
         int j = 0;
         Item item = p_190678_2_.getItem();
-        if (item == Items.WHEAT) {
+        if (item == Items.CHORUS_FRUIT) {
             f = 2.0F;
+            i = 20;
+            j = 3;
+        } if (item == Items.CHORUS_FLOWER) {
+            f = 4.0F;
             i = 20;
             j = 3;
             if (!this.level.isClientSide && this.getAge() == 0 && !this.isInLove()) {

@@ -116,14 +116,12 @@ public class RideableDragonEgg extends Block {
         if(worldIn != null && !worldIn.isClientSide){
             TileEntity tile = worldIn.getBlockEntity(pos);
             ItemStack heldItem = playerentity.getItemInHand(handIn);
-            if(tile instanceof RideableDragonEggTE){
-                if(heldItem.getItem() == Items.FLINT_AND_STEEL){
-                    ((RideableDragonEggTE)tile).ignite(playerentity.getUUID());
-                    heldItem.hurtAndBreak(1, playerentity, (player) -> {
-                        player.broadcastBreakEvent(handIn);
-                    });
-                    return ActionResultType.SUCCESS;
-                }
+            if(tile instanceof RideableDragonEggTE && heldItem.getItem() == Items.FLINT_AND_STEEL) {
+                ((RideableDragonEggTE) tile).ignite(false);
+                heldItem.hurtAndBreak(1, playerentity, (player) -> {
+                    player.broadcastBreakEvent(handIn);
+                });
+                return ActionResultType.SUCCESS;
             }
         }
         return ActionResultType.SUCCESS;

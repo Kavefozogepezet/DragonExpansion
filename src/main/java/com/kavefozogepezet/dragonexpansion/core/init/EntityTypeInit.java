@@ -29,9 +29,6 @@ public class EntityTypeInit {
     }
 
     public static void setEntitiesSpawning(BiomeLoadingEvent event) {
-        /*if(event.getCategory() == Biome.Category.THEEND){
-            event.getSpawns().addSpawn(EntityClassification.CREATURE, new MobSpawnInfo.Spawners(EntityTypeInit.RIDEABLE_DRAGON.get(), 1, 2, 4));
-        }*/
         setEntitySpawning(event, EntityTypeInit.PURPUR_DRAGON.get(), EntityClassification.CREATURE, 1, 1, 1, Biome.Category.THEEND);
     }
 

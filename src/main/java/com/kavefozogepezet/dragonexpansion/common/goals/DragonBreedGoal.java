@@ -6,11 +6,13 @@ import java.util.List;
 import javax.annotation.Nullable;
 
 import com.kavefozogepezet.dragonexpansion.common.entities.RideableDragonEntity;
+import com.kavefozogepezet.dragonexpansion.common.tiles.RideableDragonEggTE;
 import com.kavefozogepezet.dragonexpansion.core.init.BlockInit;
 import net.minecraft.entity.EntityPredicate;
 import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.ai.goal.Goal.Flag;
 import net.minecraft.entity.passive.AnimalEntity;
+import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
@@ -88,6 +90,10 @@ public class DragonBreedGoal extends Goal {
         }
         if(eggPos.below().getY() != 0) {
             this.level.setBlock(eggPos, BlockInit.RIDEABLE_DRAGON_EGG.get().defaultBlockState(), 3);
+            TileEntity tile = this.level.getBlockEntity(eggPos);
+            if(tile instanceof RideableDragonEggTE){
+                ((RideableDragonEggTE) tile).ignite(true);
+            }
         }
         this.animal.resetLove();
         this.partner.resetLove();

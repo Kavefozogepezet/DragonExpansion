@@ -6,17 +6,27 @@ import com.kavefozogepezet.dragonexpansion.core.init.EntityTypeInit;
 import com.kavefozogepezet.dragonexpansion.core.init.TileEntityTypeInit;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
+import net.minecraft.client.Minecraft;
+import net.minecraft.item.Item;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.NetworkManager;
+import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.network.play.server.SUpdateTileEntityPacket;
 import net.minecraft.tileentity.ITickableTileEntity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.tileentity.TileEntityType;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.world.server.ServerWorld;
 
+import javax.annotation.Nullable;
+import java.util.Optional;
 import java.util.UUID;
 
 public class RideableDragonEggTE extends TileEntity implements ITickableTileEntity {
+    public int burnTime = 0;
+    private final int maxHatchTime = 100; // 4800awd
+    private int hatchTime = maxHatchTime;
+    private boolean hatchedByDragon = false;
 
     public RideableDragonEggTE(TileEntityType<?> tileEntityTypeIn) {
         super(tileEntityTypeIn);
@@ -24,12 +34,6 @@ public class RideableDragonEggTE extends TileEntity implements ITickableTileEnti
     public RideableDragonEggTE() {
         super(TileEntityTypeInit.RIDEABLE_DRAGON_EGG_TE.get());
     }
-
-    public int burnTime = 0;
-    private final int maxHatchTime = 960; // 24000
-    private int hatchTime = maxHatchTime;
-
-    public UUID parent;
 
     @Override
     public void tick() {
@@ -50,22 +54,22 @@ public class RideableDragonEggTE extends TileEntity implements ITickableTileEnti
                     );
                 }
                 if (hatchTime == 0) {
-                    RideableDragonEntity createdEntity = new RideableDragonEntity(EntityTypeInit.PURPUR_DRAGON.get(), this.level);
-                    createdEntity.setAge(-24000);
-                    createdEntity.setPos(
+                    RideableDragonEntity createdEntity = EntityTypeInit.PURPUR_DRAGON.get().create(this.level);
+                    createdEntity.setBaby(true); //-24000
+                    createdEntity.moveTo(
                             this.getBlockPos().getX() + 0.5d,
                             this.getBlockPos().getY(),
                             this.getBlockPos().getZ() + 0.5d
                     );
-
                     Block egg = this.level.getBlockState(this.getBlockPos()).getBlock();
-                    this.level.addFreshEntity(createdEntity);
+                    ((ServerWorld)this.level).addFreshEntityWithPassengers(createdEntity);
+                    createdEntity.setHatchType(this.hatchedByDragon);
 
                     this.level.destroyBlock(this.getBlockPos(), false);
                     flag1 = true;
                 }
-            } else {
-                MathHelper.clamp(hatchTime + 24, 0, maxHatchTime);
+            } else if(hatchTime < maxHatchTime) {
+                hatchTime = MathHelper.clamp(hatchTime + 4, 0, maxHatchTime);
             }
 
             if ((flag != this.isBurning()) && !flag1) {
@@ -83,9 +87,12 @@ public class RideableDragonEggTE extends TileEntity implements ITickableTileEnti
         return burnTime > 0;
     }
 
-    public void ignite(UUID playerID){
-        this.burnTime = 960 + this.level.random.nextInt(480);
-        this.parent = playerID;
+    public void ignite(boolean hachedByDragon){
+        if(hachedByDragon){
+            this.burnTime = maxHatchTime;
+        } else {
+            this.burnTime = 480 + this.level.random.nextInt(480); // 480 + rand
+        }
         if (this.level != null && !this.level.isClientSide) {
             this.level.setBlock(this.worldPosition, this.level.getBlockState(this.worldPosition).setValue(RideableDragonEgg.LIT, this.isBurning()), 3);
         }
@@ -95,23 +102,16 @@ public class RideableDragonEggTE extends TileEntity implements ITickableTileEnti
     public void load(BlockState state, CompoundNBT nbt) {
         super.load(state, nbt);
 
-        if(nbt.hasUUID("Owner")){
-            parent = nbt.getUUID("Owner");
-        } else {
-            parent = null;
-        }
+        hatchedByDragon = nbt.getBoolean("HatchType");
         burnTime = nbt.getInt("BurnTime");
         hatchTime = nbt.getInt("HatchTime");
-
     }
 
     @Override
     public CompoundNBT save(CompoundNBT compound) {
         super.save(compound);
 
-        if(parent != null){
-            compound.putUUID("Owner", parent);
-        }
+        compound.putBoolean("HatchType", hatchedByDragon);
         compound.putInt("BurnTime", burnTime);
         compound.putInt("HatchTime", hatchTime);
 

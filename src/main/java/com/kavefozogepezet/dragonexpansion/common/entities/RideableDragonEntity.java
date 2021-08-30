@@ -18,6 +18,8 @@ import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.passive.PolarBearEntity;
 import net.minecraft.entity.passive.horse.AbstractHorseEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.Items;
+import net.minecraft.item.crafting.Ingredient;
 import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
@@ -40,9 +42,11 @@ import java.util.UUID;
 public class RideableDragonEntity extends AnimalEntity implements IJumpingMount, IAngerable {
 
     // -------------------- variables --------------------
-    private static final DataParameter<Optional<UUID>> DATA_ID_PARENT_UUID = EntityDataManager.defineId(AbstractHorseEntity.class, DataSerializers.OPTIONAL_UUID);
+    private static final Ingredient FOOD_ITEMS = Ingredient.of(Items.CHORUS_FLOWER);
+    private static final DataParameter<Boolean> HATCHED_BY_DRAGON = EntityDataManager.defineId(RideableDragonEntity.class, DataSerializers.BOOLEAN);
     private static final DataParameter<Boolean> FLYING = EntityDataManager.defineId(RideableDragonEntity.class, DataSerializers.BOOLEAN);
     private static final RangedInteger PERSISTENT_ANGER_TIME = TickRangeConverter.rangeOfSeconds(20, 39);
+    //private boolean hatchedByDragon = true;
     private int remainingPersistentAngerTime;
     private UUID persistentAngerTarget;
     private boolean isJumping = false;
@@ -50,10 +54,11 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount,
     public boolean isStill = false;
     Vector3d prevPos = Vector3d.ZERO;
     //for animation
-    public AnimationHolder deltaRotY = new AnimationHolder(0f);
-    public AnimationHolder bodyRotX = new AnimationHolder(0f);
-    public AnimationHolder legAnimation = new AnimationHolder(0f);
-    public AnimationHolder wingAnimation = new AnimationHolder(0f);
+    private double bodyRotX0 = 0;
+    private AnimationHolder deltaRotY = new AnimationHolder(0f);
+    private AnimationHolder bodyRotX = new AnimationHolder(0f);
+    private AnimationHolder legAnimation = new AnimationHolder(0f);
+    private AnimationHolder wingAnimation = new AnimationHolder(0f);
 
     // -------------------- Mandatory methods --------------------
     public RideableDragonEntity(EntityType<? extends AnimalEntity> p_i48563_1_, World p_i48563_2_) {
@@ -79,16 +84,17 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount,
         this.targetSelector.addGoal(1, (new HurtByTargetGoal(this)).setAlertOthers());
         this.goalSelector.addGoal(2, new DragonBreedGoal(this, 1.0D, RideableDragonEntity.class));
         this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, PlayerEntity.class,  10, true, false, this::isAngryAt));
-        this.goalSelector.addGoal(4, new WaterAvoidingRandomWalkingGoal(this, 1.0D));
-        this.targetSelector.addGoal(5, new ResetAngerGoal<>(this, false));
+        this.targetSelector.addGoal(4, new ResetAngerGoal<>(this, false));
+        this.goalSelector.addGoal(4, new TemptGoal(this, 1.0d, FOOD_ITEMS, false));
+        this.goalSelector.addGoal(5, new WaterAvoidingRandomWalkingGoal(this, 1.0D));
         this.goalSelector.addGoal(6, new LookAtGoal(this, PlayerEntity.class, 6.0F));
         this.goalSelector.addGoal(7, new LookRandomlyGoal(this));
     }
 
     protected void defineSynchedData() {
         super.defineSynchedData();
+        this.entityData.define(HATCHED_BY_DRAGON, false);
         this.entityData.define(FLYING, false);
-        this.entityData.define(DATA_ID_PARENT_UUID, Optional.empty());
     }
 
     @Override
@@ -183,8 +189,8 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount,
             MobEntity mobentity = (MobEntity)passenger;
             this.yBodyRot = mobentity.yBodyRot;
         }
-        float f1 = MathHelper.sin(this.yBodyRot * ((float)Math.PI / 180F)) * 1.375F;
-        float f2 = MathHelper.cos(this.yBodyRot * ((float)Math.PI / 180F)) * 1.375F;
+        float f1 = MathHelper.sin(this.yBodyRot * ((float)Math.PI / 180F)) * 1.4F;
+        float f2 = MathHelper.cos(this.yBodyRot * ((float)Math.PI / 180F)) * 1.4F;
         passenger.setPos(this.getX() - (double)(f1), this.getY() + 2.5D + passenger.getMyRidingOffset(), this.getZ() + (double)(f2));
         if (passenger instanceof LivingEntity) {
             ((LivingEntity)passenger).yBodyRot = this.yBodyRot;
@@ -217,6 +223,7 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount,
                     if(angle > 180d) { angle -= 360d; }
                     if(angle < -180d) { angle += 360d; }
                     if(Math.abs(angle) > 0.1d) { angle /= 15d; }
+                    angle = MathHelper.clamp(angle, -18, 18);
 
                     this.yRot += angle;
                     deltaRotY.updateAnimation((float)angle);
@@ -226,9 +233,11 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount,
                     this.yBodyRot = this.yRot;
                     this.yHeadRot = this.yBodyRot;
 
-                    Vector3d look = livingentity.getLookAngle();
-                    double f3 = Math.sqrt(1 - Math.pow(look.y, 2d));
-                    Vector3d movement = new Vector3d(f3 * -Math.sin(Math.toRadians(this.yRot)), look.y, f3 * Math.cos(Math.toRadians(this.yRot)));
+                    double movementY = MathHelper.clamp(livingentity.getLookAngle().y, -0.64d, 0.64d);
+                    double movementScale = 1.1d;// - movementY;
+                    bodyRotX0 = -Math.asin(movementY);
+                    double f3 = Math.sqrt(1 - Math.pow(movementY, 2d));
+                    Vector3d movement = new Vector3d(f3 * -Math.sin(Math.toRadians(this.yRot)), movementY, f3 * Math.cos(Math.toRadians(this.yRot))).scale(movementScale);
 
                     if(this.isControlledByLocalInstance()) {
                         if (f1 > 0) {
@@ -239,7 +248,7 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount,
                             this.setDeltaMovement(movement);
                             this.move(MoverType.SELF, this.getDeltaMovement());
                         } else if (f1 < 0) {
-                            this.setDeltaMovement(this.getDeltaMovement().scale(0.75d));
+                            this.setDeltaMovement(this.getDeltaMovement().scale(0.9d));
                             this.move(MoverType.SELF, this.getDeltaMovement());
                         } else {
                             super.travel(travelVector);
@@ -322,7 +331,8 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount,
         isStill = speed == 0;
 
         if(this.isFlying()){
-            float rotX = speed < 0.4d ? -(float)((0.4d - speed) * 2.5d * Math.PI / 4d) : 0f;
+            double rotXScale = (bodyRotX0 + Math.PI/4d) * (speed / 0.4d) - Math.PI/4d;
+            float rotX = (float)(speed < 0.4d ? rotXScale : bodyRotX0);
             this.bodyRotX.updateAnimation(rotX);
         } else {
             this.bodyRotX.updateAnimation(0f);
@@ -359,13 +369,15 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount,
     }
 
     // -------------------- custom functions --------------------
-    @Nullable
-    public UUID getParentUUID() {
-        return this.entityData.get(DATA_ID_PARENT_UUID).orElse((UUID)null);
+    public boolean getHatchType() {
+        return this.entityData.get(HATCHED_BY_DRAGON);
     }
 
-    public void setParentUUID(@Nullable UUID p_184779_1_) {
-        this.entityData.set(DATA_ID_PARENT_UUID, Optional.ofNullable(p_184779_1_));
+    public void setHatchType(boolean type) {
+        this.entityData.set(HATCHED_BY_DRAGON, type);
+        if(Minecraft.getInstance().player != null){
+            Minecraft.getInstance().player.chat(this.level.isClientSide ? "client: " : "server: " + (type ? "true" : "false"));
+        }
     }
 
     @Nullable

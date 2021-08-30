@@ -256,13 +256,13 @@ public class RideableDragonModel<T extends RideableDragonEntity> extends Ageable
 		IdleBackLegPose.footAngle = -1.0031f;
 
 		//Flying
-		FlyingFrontLegPose.legAngle =  -1.7453;
-		FlyingFrontLegPose.shinAngle = 2.4435f;
-		FlyingFrontLegPose.footAngle = -0.8727f;
+		FlyingFrontLegPose.legAngle =  1.7453;
+		FlyingFrontLegPose.shinAngle = -2.4435f;
+		FlyingFrontLegPose.footAngle = 0.8727f;
 
-		FlyingBackLegPose.legAngle = 1.1345f;
-		FlyingBackLegPose.shinAngle = -2.2689f;
-		FlyingBackLegPose.footAngle = -1.2217f;
+		FlyingBackLegPose.legAngle = -1.1345f;
+		FlyingBackLegPose.shinAngle = 2.2689f;
+		FlyingBackLegPose.footAngle = 1.2217f;
 
 		// Wing poses
 		//Idle
@@ -415,6 +415,7 @@ public class RideableDragonModel<T extends RideableDragonEntity> extends Ageable
 			this.body.xRot = bodyRotX;
 			WingAngles angles = getWingAngles(entityIn);
 			setWingAngles(angles);
+			setLegAngles(FlyingFrontLegPose, FlyingFrontLegPose, FlyingBackLegPose, FlyingBackLegPose);
 		} else {
 			this.body.zRot = 0f;
 			this.body.xRot = 0f;
