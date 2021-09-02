@@ -7,6 +7,7 @@ import com.google.common.collect.ImmutableList;
 import com.kavefozogepezet.dragonexpansion.common.entities.RideableDragonEntity;
 import net.minecraft.client.renderer.entity.model.AgeableModel;
 import net.minecraft.client.renderer.model.ModelRenderer;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.vector.Vector3d;
 
 public class RideableDragonModel<T extends RideableDragonEntity> extends AgeableModel<T> {
@@ -409,6 +410,12 @@ public class RideableDragonModel<T extends RideableDragonEntity> extends Ageable
             this.spine.xRot = headPitch * ((float) Math.PI / 180F);
             this.spine.yRot = netHeadYaw * ((float) Math.PI / 180F);
         }
+
+        float taleRotY = MathHelper.clamp(-(float)Math.toRadians(deltaRotY) * 3f, -0.3927f, 0.3927f);
+        this.tale.yRot = taleRotY;
+        spine4.yRot = taleRotY;
+        spine5.yRot = taleRotY;
+        spine6.yRot = taleRotY;
 
 		if(entityIn.isFlying()){
 			this.body.zRot = -(deltaRotY / 6f);

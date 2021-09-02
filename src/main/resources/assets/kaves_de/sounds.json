@@ -1,0 +1,20 @@
+{
+  "entity.rideable_dragon.ambient": {
+    "category": "entity",
+    "subtitle": "entity.rideable_dragon.ambient.sub",
+    "sounds": [
+      {"name": "kaves_de:entity/rideable_dragon/ambient/ambient1", "stream": true },
+      {"name": "kaves_de:entity/rideable_dragon/ambient/ambient2", "stream": true }
+    ]
+  },
+  "entity.rideable_dragon.babyambient": {
+    "category": "entity",
+    "subtitle": "entity.rideable_dragon.babyambient.sub",
+    "sounds": [
+      {"name": "kaves_de:entity/rideable_dragon/babyambient/babyambient1", "stream": true },
+      {"name": "kaves_de:entity/rideable_dragon/babyambient/babyambient2", "stream": true },
+      {"name": "kaves_de:entity/rideable_dragon/babyambient/babyambient3", "stream": true },
+      {"name": "kaves_de:entity/rideable_dragon/babyambient/babyambient4", "stream": true }
+    ]
+  }
+}

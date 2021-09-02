@@ -5,6 +5,7 @@ import com.kavefozogepezet.dragonexpansion.common.goals.DragonBreedGoal;
 import com.kavefozogepezet.dragonexpansion.common.goals.MeleeAttackIfAdultGoal;
 import com.kavefozogepezet.dragonexpansion.common.goals.PanicIfBabyGoal;
 import com.kavefozogepezet.dragonexpansion.core.init.EntityTypeInit;
+import com.kavefozogepezet.dragonexpansion.core.init.SoundEventInit;
 import mcp.MethodsReturnNonnullByDefault;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -18,12 +19,15 @@ import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.passive.PolarBearEntity;
 import net.minecraft.entity.passive.horse.AbstractHorseEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.crafting.Ingredient;
+import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
 import net.minecraft.potion.Effects;
+import net.minecraft.server.management.PreYggdrasilConverter;
 import net.minecraft.util.*;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
@@ -46,7 +50,6 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount,
     private static final DataParameter<Boolean> HATCHED_BY_DRAGON = EntityDataManager.defineId(RideableDragonEntity.class, DataSerializers.BOOLEAN);
     private static final DataParameter<Boolean> FLYING = EntityDataManager.defineId(RideableDragonEntity.class, DataSerializers.BOOLEAN);
     private static final RangedInteger PERSISTENT_ANGER_TIME = TickRangeConverter.rangeOfSeconds(20, 39);
-    //private boolean hatchedByDragon = true;
     private int remainingPersistentAngerTime;
     private UUID persistentAngerTarget;
     private boolean isJumping = false;
@@ -93,7 +96,7 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount,
 
     protected void defineSynchedData() {
         super.defineSynchedData();
-        this.entityData.define(HATCHED_BY_DRAGON, false);
+        this.entityData.define(HATCHED_BY_DRAGON, true);
         this.entityData.define(FLYING, false);
     }
 
@@ -106,6 +109,23 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount,
     @Override
     public AgeableEntity getBreedOffspring(ServerWorld serverWorld, AgeableEntity ageableEntity) {
         return EntityTypeInit.PURPUR_DRAGON.get().create(serverWorld);
+    }
+
+    // -------------------- NBT --------------------
+    public void addAdditionalSaveData(CompoundNBT p_213281_1_) {
+        super.addAdditionalSaveData(p_213281_1_);
+        this.addPersistentAngerSaveData(p_213281_1_);
+        p_213281_1_.putBoolean("HatchedByDragon", this.getHatchType());
+        p_213281_1_.putBoolean("IsFlying", this.entityData.get(FLYING));
+    }
+
+    public void readAdditionalSaveData(CompoundNBT p_70037_1_) {
+        super.readAdditionalSaveData(p_70037_1_);
+        if(!level.isClientSide) {
+            this.readPersistentAngerSaveData((ServerWorld) this.level, p_70037_1_);
+            this.setHatchType(p_70037_1_.getBoolean("HatchedByDragon"));
+            this.entityData.set(FLYING, p_70037_1_.getBoolean("IsFlying"));
+        }
     }
 
     // -------------------- jumping mount --------------------
@@ -143,10 +163,20 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount,
         return 200;
     }
 
+    @Override
+    protected float getVoicePitch() {
+        return (this.random.nextFloat() - this.random.nextFloat()) * 0.2F + 1.0F;
+    }
+
+    @Override
+    protected float getSoundVolume() {
+        return this.isBaby() ? 0.3f : 1.0f;
+    }
+
     @Nullable
     @Override
     protected SoundEvent getAmbientSound() {
-        return SoundEvents.ENDER_DRAGON_AMBIENT;
+        return this.isBaby() ? SoundEventInit.RIDEABLE_DRAGON_BABY_AMBIENT.get() : SoundEventInit.RIDEABLE_DRAGON_AMBIENT.get();
     }
 
     @Nullable
@@ -169,11 +199,15 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount,
 
     @Override
     protected void playStepSound(BlockPos pos, BlockState blockIn) {
-        this.playSound(SoundEvents.IRON_GOLEM_STEP, 0.15f, 1.0f);
+        this.playSound(SoundEvents.COW_STEP, 0.15f, 1.0f);
     }
 
     protected void playJumpSound() {
-        this.playSound(SoundEvents.HORSE_JUMP, 0.4F, 1.0F);
+        this.playSound(SoundEvents.COW_STEP, 0.4F, 1.0F);
+    }
+
+    protected void playFlapSound() {
+        this.level.playLocalSound(this.getX(), this.getY(), this.getZ(), SoundEvents.ENDER_DRAGON_FLAP, this.getSoundSource(), 5.0F, 0.8F + this.random.nextFloat() * 0.3F, false);
     }
 
     // -------------------- overrides --------------------
@@ -211,27 +245,31 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount,
     }
 
     @Override
+    public boolean isFood(ItemStack itemStack) {
+        return FOOD_ITEMS.test(itemStack);
+    }
+
+    private float getCorrespondingAngle(float angle) {
+        float result = angle % 360f;
+        return result >= 0 ? result : 360f + result;
+    }
+
+    @Override
     public void travel(Vector3d travelVector) {
         if (this.isAlive()) {
             boolean b1 = this.entityData.get(FLYING);
+            this.yRot = getCorrespondingAngle(this.yRot);
             if (this.isVehicle() && this.canBeControlledByRider()) {
                 LivingEntity livingentity = (LivingEntity)this.getControllingPassenger();
                 float f = livingentity.xxa * 0.5F;
                 float f1 = livingentity.zza;
+                double angle = getCorrespondingAngle(livingentity.yRot) - this.yRot;
+                if(angle > 180d) { angle -= 360d; }
+                if(angle < -180d) { angle += 360d; }
                 if(b1) {
-                    double angle = (livingentity.yRot % 360d) - yRot;
-                    if(angle > 180d) { angle -= 360d; }
-                    if(angle < -180d) { angle += 360d; }
                     if(Math.abs(angle) > 0.1d) { angle /= 15d; }
                     angle = MathHelper.clamp(angle, -18, 18);
-
-                    this.yRot += angle;
-                    deltaRotY.updateAnimation((float)angle);
-                    this.yRotO = this.yRot;
-                    this.xRot = livingentity.xRot * 0.5F;
-                    this.setRot(this.yRot, this.xRot);
-                    this.yBodyRot = this.yRot;
-                    this.yHeadRot = this.yBodyRot;
+                    this.yRot = getCorrespondingAngle(this.yRot + (float)angle);
 
                     double movementY = MathHelper.clamp(livingentity.getLookAngle().y, -0.64d, 0.64d);
                     double movementScale = 1.1d;// - movementY;
@@ -255,12 +293,10 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount,
                         }
                     }
                 } else {
-                    this.yRot = livingentity.yRot;
-                    this.yRotO = this.yRot;
-                    this.xRot = livingentity.xRot * 0.5F;
-                    this.setRot(this.yRot, this.xRot);
-                    this.yBodyRot = this.yRot;
-                    this.yHeadRot = this.yBodyRot;
+                    if(Math.abs(angle) > 0.1d) { angle /= 5d; }
+                    angle = MathHelper.clamp(angle, -36, 36);
+                    this.yRot += angle;
+
                     if (f1 <= 0.0F) {
                         f1 *= 0.25F;
                     }
@@ -296,6 +332,16 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount,
                         this.setDeltaMovement(Vector3d.ZERO);
                     }
                 }
+
+                deltaRotY.updateAnimation((float)angle);
+                this.yRotO = this.yRot;
+                this.xRot = livingentity.xRot * 0.5F;
+                this.setRot(this.yRot, this.xRot);
+                this.yBodyRot = this.yRot;
+                float deltaHeadRotY = getCorrespondingAngle(livingentity.yRot) - this.yRot;
+                if(deltaHeadRotY > 180d) { deltaHeadRotY -= 360d; }
+                if(deltaHeadRotY < -180d) { deltaHeadRotY += 360d; }
+                this.yHeadRot = this.yRot + deltaHeadRotY;
 
                 if (this.onGround) {
                     this.playerJumpPendingScale = 0.0F;
@@ -337,6 +383,10 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount,
         } else {
             this.bodyRotX.updateAnimation(0f);
         }
+
+        if(!this.isVehicle()){
+            deltaRotY.updateAnimation(0);
+        }
     }
 
     @Override
@@ -375,9 +425,6 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount,
 
     public void setHatchType(boolean type) {
         this.entityData.set(HATCHED_BY_DRAGON, type);
-        if(Minecraft.getInstance().player != null){
-            Minecraft.getInstance().player.chat(this.level.isClientSide ? "client: " : "server: " + (type ? "true" : "false"));
-        }
     }
 
     @Nullable

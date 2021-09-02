@@ -24,9 +24,9 @@ import java.util.UUID;
 
 public class RideableDragonEggTE extends TileEntity implements ITickableTileEntity {
     public int burnTime = 0;
-    private final int maxHatchTime = 100; // 4800awd
+    private final int maxHatchTime = 4800; // 4800awd
     private int hatchTime = maxHatchTime;
-    private boolean hatchedByDragon = false;
+    private boolean hatchedByDragon = true;
 
     public RideableDragonEggTE(TileEntityType<?> tileEntityTypeIn) {
         super(tileEntityTypeIn);
@@ -48,25 +48,26 @@ public class RideableDragonEggTE extends TileEntity implements ITickableTileEnti
             if(flag) {
                 hatchTime--;
                 int hatchProgress = (hatchTime / (maxHatchTime / 19)) + 1;
-                if(hatchProgress != this.level.getBlockState(this.worldPosition).getValue(RideableDragonEgg.TICK_PER_PARTICLE)){
+                if(hatchProgress != this.level.getBlockState(this.worldPosition).getValue(RideableDragonEgg.TICK_PER_PARTICLE)) {
                     this.level.setBlock(this.worldPosition, this.level.getBlockState(this.worldPosition).setValue(
                             RideableDragonEgg.TICK_PER_PARTICLE, hatchProgress), 3
                     );
                 }
                 if (hatchTime == 0) {
                     RideableDragonEntity createdEntity = EntityTypeInit.PURPUR_DRAGON.get().create(this.level);
-                    createdEntity.setBaby(true); //-24000
-                    createdEntity.moveTo(
-                            this.getBlockPos().getX() + 0.5d,
-                            this.getBlockPos().getY(),
-                            this.getBlockPos().getZ() + 0.5d
-                    );
-                    Block egg = this.level.getBlockState(this.getBlockPos()).getBlock();
-                    ((ServerWorld)this.level).addFreshEntityWithPassengers(createdEntity);
-                    createdEntity.setHatchType(this.hatchedByDragon);
+                    if(createdEntity != null) {
+                        createdEntity.setAge(-24000); //-24000
+                        createdEntity.moveTo(
+                                this.getBlockPos().getX() + 0.5d,
+                                this.getBlockPos().getY(),
+                                this.getBlockPos().getZ() + 0.5d
+                        );
+                        ((ServerWorld) this.level).addFreshEntityWithPassengers(createdEntity);
+                        createdEntity.setHatchType(this.hatchedByDragon);
 
-                    this.level.destroyBlock(this.getBlockPos(), false);
-                    flag1 = true;
+                        this.level.destroyBlock(this.getBlockPos(), false);
+                        flag1 = true;
+                    }
                 }
             } else if(hatchTime < maxHatchTime) {
                 hatchTime = MathHelper.clamp(hatchTime + 4, 0, maxHatchTime);
