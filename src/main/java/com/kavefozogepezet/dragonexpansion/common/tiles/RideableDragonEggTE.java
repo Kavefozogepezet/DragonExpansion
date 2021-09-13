@@ -24,7 +24,7 @@ import java.util.UUID;
 
 public class RideableDragonEggTE extends TileEntity implements ITickableTileEntity {
     public int burnTime = 0;
-    private final int maxHatchTime = 4800; // 4800awd
+    private final int maxHatchTime = 4800; // 4800
     private int hatchTime = maxHatchTime;
     private boolean hatchedByDragon = true;
 
@@ -88,8 +88,9 @@ public class RideableDragonEggTE extends TileEntity implements ITickableTileEnti
         return burnTime > 0;
     }
 
-    public void ignite(boolean hachedByDragon){
-        if(hachedByDragon){
+    public void ignite(boolean dragonIgnition){
+        this.hatchedByDragon = dragonIgnition;
+        if(this.hatchedByDragon){
             this.burnTime = maxHatchTime;
         } else {
             this.burnTime = 480 + this.level.random.nextInt(480); // 480 + rand

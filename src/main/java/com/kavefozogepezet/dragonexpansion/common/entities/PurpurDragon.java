@@ -19,9 +19,9 @@ public class PurpurDragon extends RideableDragonEntity{
     }
 
     public ActionResultType mobInteract(PlayerEntity p_230254_1_, Hand p_230254_2_) {
-        if(Minecraft.getInstance().player != null){
+        /*if(Minecraft.getInstance().player != null){
             Minecraft.getInstance().player.chat(this.level.isClientSide ? "client: " : "server: " + (this.getHatchType() ? "true" : "false"));
-        }
+        }*/
         ItemStack itemstack = p_230254_1_.getItemInHand(p_230254_2_);
         if (!this.isBaby()) {
             if (this.isVehicle()) {

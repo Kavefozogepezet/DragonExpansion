@@ -25,7 +25,7 @@ public class EntityTypeInit {
             );
 
     public static void onBiomeLoadingEvent(BiomeLoadingEvent event) {
-        setEntitiesSpawning(event);
+        EntityTypeInit.setEntitiesSpawning(event);
     }
 
     public static void setEntitiesSpawning(BiomeLoadingEvent event) {

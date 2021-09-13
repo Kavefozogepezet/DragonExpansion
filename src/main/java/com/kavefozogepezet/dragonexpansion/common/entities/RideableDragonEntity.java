@@ -73,9 +73,11 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount,
         return MobEntity.createMobAttributes()
                 .add(Attributes.MAX_HEALTH, 40d)
                 .add(Attributes.MOVEMENT_SPEED, 0.3d)
-                .add(Attributes.ATTACK_DAMAGE, 6.0D)
-                .add(Attributes.ATTACK_KNOCKBACK, 16.0D)
-                .add(Attributes.JUMP_STRENGTH, 1.0D);
+                .add(Attributes.ATTACK_DAMAGE, 12.0d)
+                .add(Attributes.ATTACK_KNOCKBACK, 16.0d)
+                .add(Attributes.KNOCKBACK_RESISTANCE, 0.6d)
+                .add(Attributes.JUMP_STRENGTH, 1.0d)
+                .add(Attributes.FOLLOW_RANGE, 48d);
     }
 
     @Override
@@ -527,9 +529,11 @@ public class RideableDragonEntity extends AnimalEntity implements IJumpingMount,
 
     public static boolean checkRideableDragonSpawnRules(EntityType<? extends MobEntity> p_223315_0_, IWorld p_223315_1_, SpawnReason p_223315_2_, BlockPos p_223315_3_, Random p_223315_4_) {
         boolean result =  p_223315_1_.getBlockState(p_223315_3_.below()).is(Blocks.END_STONE);
-        Random random = new Random();
-        int chance = Math.abs(random.nextInt()) % 2;
-        return chance == 0 && result;
+        //int chance = Math.abs(p_223315_4_.nextInt()) % 2;
+        /*if(Minecraft.getInstance().player != null){
+            Minecraft.getInstance().player.chat(p_223315_2_.toString());
+        }*/
+        return /*(p_223315_2_ != SpawnReason.NATURAL) &&*/ result;
     }
 
     // -------------------- anger --------------------
